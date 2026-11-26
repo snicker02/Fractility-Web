@@ -2,7 +2,7 @@
 // Two RGBA8 textures are ping-ponged exactly like Godot's ViewportA / ViewportB pair:
 // each step renders the feedback shader into the target while sampling the source.
 
-import { VERT, feedbackFragment, POST_FRAG, COPY_FRAG, SLOT_VEC4 } from './shaders.js?v=1.4.0';
+import { VERT, feedbackFragment, POST_FRAG, COPY_FRAG, SLOT_VEC4 } from './shaders.js?v=1.4.1';
 
 function compile(gl, type, src) {
     const s = gl.createShader(type);
@@ -351,4 +351,4 @@ export class Renderer {
     }
 }
 
-export { SLOT_VEC4, PARAMS, VARIATIONS, slotLayout } from './shaders.js?v=1.4.0';
+export { SLOT_VEC4, PARAMS, VARIATIONS, slotLayout } from './shaders.js?v=1.4.1';

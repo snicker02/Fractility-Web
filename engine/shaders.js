@@ -4,7 +4,7 @@
 // uniform arrays (uA / uB). This keeps the program small enough for mobile GPUs, which
 // could never hold the ~600 scalar uniforms of the original Godot monolith.
 
-import { VAR_GLSL, VARIATIONS, PARAMS } from './varlib.js?v=1.4.0';
+import { VAR_GLSL, VARIATIONS, PARAMS } from './varlib.js?v=1.4.1';
 
 export const SLOT_VEC4 = 8; // 32 floats per variation slot
 

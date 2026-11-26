@@ -31,7 +31,9 @@ with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=ARGS)
 
     # ---------------- desktop: functional checks ----------------
+    stub = lambda r: r.fulfill(status=200, body='', headers={'content-type': 'text/javascript'})  # shelf bridge: see tests/shelf_test.py
     ctx = b.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
+    ctx.route('https://snicker02.github.io/**', stub)
     page = ctx.new_page()
     errors = []
     page.on('pageerror', lambda e: errors.append(str(e)))
@@ -232,7 +234,7 @@ with sync_playwright() as p:
     ok(head[:8] == b'\x89PNG\r\n\x1a\n' and w == 2048, f'PNG saved {w}x{h}')
 
     # recordings
-    sup = page.evaluate('() => window.__fractility.recorder && (async () => (await import("./engine/recorder.js?v=1.4.0")).recordingSupport())()')
+    sup = page.evaluate('() => window.__fractility.recorder && (async () => (await import("./engine/recorder.js?v=1.4.1")).recordingSupport())()')
     print('recording support:', sup)
     for fmt in ['webm', 'mp4']:
         if not sup.get(fmt):
@@ -260,12 +262,12 @@ with sync_playwright() as p:
     has_vc = page.evaluate('() => typeof VideoEncoder !== "undefined"')
     if has_vc:
         info = page.evaluate('''async () => {
-            const { Recorder } = await import('./engine/recorder.js?v=1.4.0');
+            const { Recorder } = await import('./engine/recorder.js?v=1.4.1');
             const c = document.getElementById('gl');
             const r = new Recorder(c);
             r.format = 'mp4';
             // emulate start() for webcodecs path
-            const RS = await import('./engine/recorder.js?v=1.4.0');
+            const RS = await import('./engine/recorder.js?v=1.4.1');
             const orig = RS.recordingSupport;
             await (async () => {
                 r.mode = 'wc';
@@ -293,6 +295,7 @@ with sync_playwright() as p:
     # ---------------- phone layouts ----------------
     for (vw, vh, name) in [(390, 844, 'phone_portrait_390x844'), (844, 390, 'phone_landscape_844x390')]:
         ctx = b.new_context(viewport={'width': vw, 'height': vh}, has_touch=True, is_mobile=True, device_scale_factor=2)
+        ctx.route('https://snicker02.github.io/**', stub)
         pg = ctx.new_page()
         errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))

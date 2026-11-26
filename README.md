@@ -1,4 +1,4 @@
-# Fractility Web — v1.4.0
+# Fractility Web — v1.4.1
 
 A browser version of the **2D fractal / video-feedback** part of [Fractility](https://github.com/snicker02/Fractility) (the Godot app). It leaves out the 3D part.
 
@@ -33,6 +33,10 @@ Each iteration, two flame-style **variations** (A and B) remap the previous fram
   - optional surface lighting. This is in the original shader but has no UI in the Godot app.
 - **Randomize** uses Fractility's odds and options: variations, parameters, speeds, colours, and randomize on startup.
 - **Presets** are JSON files that use Fractility's key names, so 2D presets saved from the Godot app load here. Save, load, copy and paste are all supported.
+- **Shared image shelf:** works with the other [snicker02 apps](https://snicker02.github.io/#shelf) through the **⇄ Shelf** button.
+  - **Save current** puts the current frame on the shelf, with its preset stored alongside it. You can also send the frame straight to another app.
+  - **Load here**, or an image sent from another app, becomes the **Image Input** start pattern.
+  - Images stay in your browser.
 - **Export:**
   - PNG at view size or up to 8192 px wide, with a chosen aspect ratio
   - **MP4 (H.264)** and **WebM** video. MP4 uses the browser's native recorder where it has one. Otherwise it uses WebCodecs plus a built-in MP4 muxer.
@@ -114,9 +118,12 @@ All code is GLSL ES 1.00 / WebGL1 with no dependencies.
 ```
 node tests/validate-shaders.mjs   # every variation in both slots + post/copy, via glslangValidator (GLSL ES 100)
 python3 tests/browser_test.py     # headless Chrome: all variations on real WebGL, presets, PNG, WebM/MP4, phone layouts, touch
+SITE=../snicker02.github.io python3 tests/shelf_test.py   # shelf: save, apps.json target, ?shelf= hand-off
 ```
 
 ## Changelog
+
+- **1.4.1** — Connected the shared snicker02 image shelf.
 
 - **1.4.0** — Added the global Black areas fill and the ring Cut fill and Cut shade controls. Filled cuts are flagged through a shader global, so their mapped coordinates lose no precision. Tested: black pixels drop from 25% to 0% in every fill mode, and from 64% to 0% on Jigsaw.
 
