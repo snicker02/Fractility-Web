@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0e12">
+<title>Fractility</title>
+<meta name="description" content="Fractility — fractal video-feedback art in the browser. Two flame-style variations, mixed and fed back into themselves.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css?v=1.4.0">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand"><span class="logo">Fractility</span><span class="ver" id="ver"></span><span class="sub">fractal feedback</span></div>
+  <div class="actions">
+    <button id="btnFreeze" title="Freeze / resume the feedback loop (Space)">⏸ Freeze</button>
+    <button id="btnReseed" title="Reseed from the start pattern (T)">↺ Reseed</button>
+    <button id="btnRandom" title="Randomize using the options in the Random tab">🎲 Random</button>
+    <button id="btnReset" title="Reset everything to defaults (R)">Reset</button>
+    <button id="btnSave" title="Save a PNG at the resolution set in the File tab">⤓ PNG</button>
+    <button id="btnRec" title="Start / stop recording (format in the File tab)">● Rec</button>
+    <button id="btnHide" title="Hide the interface (U)">Hide UI</button>
+    <span class="stat" id="stat"></span>
+  </div>
+</header>
+
+<div id="main">
+  <div id="view">
+    <canvas id="gl"></canvas>
+    <div id="hint" class="hint"></div>
+    <div id="recBadge" class="recbadge" hidden></div>
+    <div id="toast" class="toast" hidden></div>
+    <button id="btnShowUI" class="showui" hidden title="Show interface (U)">☰</button>
+  </div>
+
+  <div id="side">
+  <nav class="tabstrip" id="tabstrip"></nav>
+  <aside id="panel">
+
+    <section class="sec" data-tab="main">
+      <h2>Main</h2>
+      <div class="row"><label for="varA">Variation A</label><select id="varA" class="varsel"></select></div>
+      <div class="row"><label for="varB">Variation B</label><select id="varB" class="varsel"></select></div>
+      <div class="row"><label for="combineMode">Combine</label>
+        <select id="combineMode"><option value="0">Blend coordinates (original)</option><option value="1">IFS — average</option><option value="2">IFS — union (max)</option><option value="3">IFS — patchwork (regions)</option></select></div>
+      <div class="note" id="combineNote"></div>
+      <div id="patchCtl" hidden>
+        <div class="row"><label for="patchShape">Patch shape</label><select id="patchShape"><option value="0">Blobs (noise)</option><option value="1">Cells (Voronoi)</option></select></div>
+        <div id="ctlPatch"></div>
+      </div>
+      <div id="ctlMain"></div>
+      <div class="sub">
+        <div class="subhead">Black areas</div>
+        <div class="row"><label for="outsideFill">Fill with</label>
+          <select id="outsideFill"><option value="0">Black (original)</option><option value="1">Colour</option><option value="2">Start pattern</option></select></div>
+        <div class="checks" id="outsideColLbl"><label>Colour <input type="color" id="outsideCol"></label></div>
+        <div class="note">Points a variation marks as "outside": Jigsaw and Constructivist lines, and ring cuts. Ring cuts can also take a map type: Var A/B → Cut fill.</div>
+      </div>
+      <div class="sub">
+        <div class="subhead">Feedback range</div>
+        <div class="row pair"><label>Min</label><input type="number" id="fbMin" step="0.01" min="0" max="1"><label>Max</label><input type="number" id="fbMax" step="0.01" min="0" max="1"></div>
+      </div>
+      <div class="sub">
+        <div class="subhead">Drag moves</div>
+        <div class="checks">
+          <label><input type="checkbox" id="movePost"> Post</label>
+          <label><input type="checkbox" id="movePre"> Pre</label>
+          <label><input type="checkbox" id="moveA"> Var A</label>
+          <label><input type="checkbox" id="moveB"> Var B</label>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="resetOnDrag"> Reseed on release</label>
+          <button id="btnCenter" class="small">Re-center all</button>
+        </div>
+      </div>
+      <div class="sub">
+        <div class="subhead">Tiling &amp; time</div>
+        <div class="checks">
+          <label><input type="checkbox" id="seamless"> Seamless tiling</label>
+          <label><input type="checkbox" id="mirrorTile"> Mirror tiling</label>
+          <label><input type="checkbox" id="pauseTime"> Pause animation</label>
+        </div>
+        <div class="row"><label for="simRate">Iterations / s</label>
+          <select id="simRate"><option value="20">20 (original)</option><option value="30">30</option><option value="60">60</option><option value="0">Every frame</option></select></div>
+        <div class="row"><label for="resScale">Resolution</label>
+          <select id="resScale"><option value="0.5">½ view</option><option value="0.75">¾ view</option><option value="1">View</option><option value="dpr">View × pixel ratio</option></select></div>
+      </div>
+      <div class="sub">
+        <div class="subhead">Quality</div>
+        <div class="row"><label for="bufPrec">Buffer</label>
+          <select id="bufPrec"><option value="float">Float (smooth)</option><option value="8bit">8-bit (original)</option></select></div>
+        <div class="row"><label for="resampleMode">Resample</label>
+          <select id="resampleMode"><option value="1">Sharp (bicubic)</option><option value="0">Linear (original)</option></select></div>
+        <div id="ctlQuality"></div>
+      </div>
+    </section>
+
+    <section class="sec" data-tab="pattern">
+      <h2>Pattern</h2>
+      <div class="row"><label for="startPattern">Start pattern</label>
+        <select id="startPattern">
+          <option value="0">Gradient + Grid</option><option value="1">Circles</option><option value="2">Image Input</option>
+          <option value="3">Perlin Noise</option><option value="4">Concentric Rings</option><option value="5">Snowflake</option>
+        </select></div>
+      <div class="sub">
+        <div class="subhead">Feed</div>
+        <div class="row"><label for="feedMode">Feed mode</label>
+          <select id="feedMode"><option value="1">Warped (no ghosting)</option><option value="0">Overlay (original)</option></select></div>
+        <div id="ctlFeed"></div>
+        <div class="note" id="feedNote"></div>
+      </div>
+      <div class="sub" data-pat="0 1 4 5">
+        <div class="subhead">Gradient corners</div>
+        <div class="colors">
+          <label>TL <input type="color" id="colTL"></label><label>TR <input type="color" id="colTR"></label>
+          <label>BL <input type="color" id="colBL"></label><label>BR <input type="color" id="colBR"></label>
+        </div>
+      </div>
+      <div class="sub" data-pat="0"><div class="checks"><label><input type="checkbox" id="showGrid"> Show grid</label></div></div>
+      <div class="sub" data-pat="1"><div class="checks"><label><input type="checkbox" id="showCircles"> Show circles</label></div><div id="ctlCircles"></div></div>
+      <div class="sub" data-pat="4"><div id="ctlRings"></div></div>
+      <div class="sub" data-pat="2">
+        <div class="subhead">Image / video input</div>
+        <div class="checks">
+          <button id="btnLoadImg" class="small">Load image or video…</button>
+          <button id="btnCam" class="small">Use camera</button>
+          <button id="btnClearImg" class="small">Clear</button>
+        </div>
+        <div class="note" id="imgInfo">No source loaded.</div>
+        <input type="file" id="fileImg" accept="image/*,video/*" hidden>
+        <div id="ctlImage"></div>
+      </div>
+      <div class="sub" data-pat="5">
+        <div class="checks"><label><input type="checkbox" id="genOn"> Snowflake generator</label>
+          <label>Colour <input type="color" id="snowCol"></label></div>
+        <div id="ctlSnow"></div>
+      </div>
+    </section>
+
+    <section class="sec" data-tab="vara">
+      <h2>Var A</h2>
+      <div class="varhead" id="varAName"></div>
+      <div id="ctlVarA"></div>
+      <div class="checks"><button class="small" data-defaults="a">Defaults for this variation</button></div>
+    </section>
+
+    <section class="sec" data-tab="varb">
+      <h2>Var B</h2>
+      <div class="varhead" id="varBName"></div>
+      <div id="ctlVarB"></div>
+      <div class="checks"><button class="small" data-defaults="b">Defaults for this variation</button></div>
+    </section>
+
+    <section class="sec" data-tab="escape">
+      <h2>Escape</h2>
+      <div class="note">Escape-time / orbit-trap mask: points that land farther than the limit are refilled from the start pattern.</div>
+      <div class="checks"><label><input type="checkbox" id="escOn"> Use escape time</label><label><input type="checkbox" id="escInv"> Invert</label></div>
+      <div class="row"><label for="escShape">Shape</label><select id="escShape"><option value="0">Circle</option><option value="1">Square</option><option value="2">Cross</option><option value="3">Diamond</option></select></div>
+      <div id="ctlEscape"></div>
+    </section>
+
+    <section class="sec" data-tab="effects">
+      <h2>Effects</h2>
+      <div class="sub">
+        <div class="subhead">Output symmetry</div>
+        <div class="checks"><label><input type="checkbox" id="pMirX"> Mirror X</label><label><input type="checkbox" id="pMirY"> Mirror Y</label><label><input type="checkbox" id="pKal"> Kaleidoscope</label></div>
+        <div id="ctlKal"></div>
+      </div>
+      <div class="sub"><div class="subhead">Colour grading</div><div id="ctlGrade"></div></div>
+      <div class="sub">
+        <div class="subhead">Surface lighting</div>
+        <div class="note">Embosses the image and writes the result back into the loop.</div>
+        <div class="checks"><label><input type="checkbox" id="litOn"> Enable</label></div>
+        <div id="ctlLight"></div>
+      </div>
+    </section>
+
+    <section class="sec" data-tab="random">
+      <h2>Random</h2>
+      <div class="checks col">
+        <label><input type="checkbox" id="rndVars"> Variations</label>
+        <label><input type="checkbox" id="rndParams"> Parameters</label>
+        <label><input type="checkbox" id="rndSpeed"> Speeds (animation)</label>
+        <label><input type="checkbox" id="rndColors"> Colours</label>
+        <label><input type="checkbox" id="rndStartup"> Randomize on startup</label>
+      </div>
+      <button id="btnRandom2" class="wide">🎲 Randomize</button>
+    </section>
+
+    <section class="sec" data-tab="file">
+      <h2>File</h2>
+      <div class="sub">
+        <div class="subhead">Still image</div>
+        <div class="row"><label for="saveW">Width</label><select id="saveW"><option value="view">View size</option><option value="1024">1024</option><option value="2048">2048</option><option value="4096">4096</option><option value="8192">8192</option></select></div>
+        <div class="row"><label for="saveAspect">Aspect</label><select id="saveAspect"><option value="view">Match view</option><option value="1.7778">16:9</option><option value="1">1:1</option><option value="0.5625">9:16</option><option value="1.3333">4:3</option></select></div>
+        <button id="btnSave2" class="wide">⤓ Save PNG</button>
+      </div>
+      <div class="sub">
+        <div class="subhead">Video</div>
+        <div class="row"><label for="recFmt">Format</label><select id="recFmt"><option value="mp4">MP4 (H.264)</option><option value="webm">WebM</option></select></div>
+        <div class="row"><label for="recFps">Frame rate</label><select id="recFps"><option value="20">20</option><option value="30">30</option><option value="60">60</option></select></div>
+        <div class="row"><label for="recMbps">Quality</label><select id="recMbps"><option value="6">6 Mbps</option><option value="12">12 Mbps</option><option value="24">24 Mbps</option></select></div>
+        <div class="note" id="recInfo"></div>
+        <button id="btnRec2" class="wide">● Start recording</button>
+      </div>
+      <div class="sub">
+        <div class="subhead">Presets</div>
+        <div class="note">JSON presets use Fractility's key names, so 2D presets saved from the Godot version load here (3D settings are ignored).</div>
+        <div class="grid2">
+          <button id="btnPresetSave">Save preset…</button><button id="btnPresetLoad">Load preset…</button>
+          <button id="btnPresetCopy">Copy to clipboard</button><button id="btnPresetPaste">Paste from clipboard</button>
+        </div>
+        <input type="file" id="filePreset" accept=".json,application/json,text/plain" hidden>
+      </div>
+      <div class="sub">
+        <div class="subhead">Keys</div>
+        <div class="note keys">R reset · T reseed · U hide UI · Space freeze · drag = move · wheel = post zoom · Shift+wheel = post rotate · Ctrl+wheel = pre zoom · Ctrl+Shift+wheel = pre rotate</div>
+      </div>
+    </section>
+
+    <footer class="credit">Created with help from Claude AI</footer>
+  </aside>
+  </div>
+</div>
+
+<dialog id="pasteDlg">
+  <form method="dialog">
+    <div class="subhead">Paste preset JSON</div>
+    <textarea id="pasteText" rows="8"></textarea>
+    <div class="grid2"><button value="cancel">Cancel</button><button value="ok" id="pasteOk">Apply</button></div>
+  </form>
+</dialog>
+
+<script type="module" src="main.js?v=1.4.0"></script>
+</body>
+</html>
