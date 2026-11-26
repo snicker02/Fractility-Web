@@ -2,10 +2,10 @@
 // A browser port of the 2D feedback/fractal half of Fractility (Godot): two variations (A, B)
 // remap the previous frame, are mixed, post-transformed and blended with a start pattern.
 
-import { Renderer, PARAMS, VARIATIONS, slotLayout, SLOT_VEC4 } from './engine/renderer.js?v=1.4.0';
-import { Recorder, recordingSupport } from './engine/recorder.js?v=1.4.0';
+import { Renderer, PARAMS, VARIATIONS, slotLayout, SLOT_VEC4 } from './engine/renderer.js?v=1.4.1';
+import { Recorder, recordingSupport } from './engine/recorder.js?v=1.4.1';
 
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 const LS = { state: 'fractility.state', tab: 'fractility.tab', rnd: 'fractility.rnd', file: 'fractility.file' };
 const $ = (id) => document.getElementById(id);
 const INVERSE_VARIATIONS = [1];
@@ -549,24 +549,43 @@ async function useCamera() {
 }
 
 // ------------------------------------------------------------------ saving
+/** Render the current frame (through the post pass) at w×h and encode it as a PNG Blob. */
+async function renderPNG(w, h) {
+    const k = Math.min(1, R.maxTex / Math.max(w, h));
+    w = Math.round(w * k); h = Math.round(h * k);
+    ensureProgram();
+    fillSlot(slotA, S.variation_mode_a_id, 'a'); fillSlot(slotB, S.variation_mode_b_id, 'b');
+    const img = R.renderStill(feedbackUniforms(), postUniforms(), slotA, slotB, w, h);
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+    const blob = await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('PNG encode failed'))), 'image/png'));
+    return { blob, width: img.width, height: img.height };
+}
+
 async function savePNG() {
     try {
         const sel = $('saveW').value, asp = $('saveAspect').value;
-        const viewAspect = R.w / R.h;
-        const aspect = asp === 'view' ? viewAspect : parseFloat(asp);
-        let w = sel === 'view' ? R.w : parseInt(sel, 10);
-        let h = Math.round(w / aspect);
-        const k = Math.min(1, R.maxTex / Math.max(w, h));
-        w = Math.round(w * k); h = Math.round(h * k);
-        ensureProgram();
-        fillSlot(slotA, S.variation_mode_a_id, 'a'); fillSlot(slotB, S.variation_mode_b_id, 'b');
-        const img = R.renderStill(feedbackUniforms(), postUniforms(), slotA, slotB, w, h);
-        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-        c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
-        const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
-        download(blob, `fractility_${stamp()}.png`);
-        toast(`Saved ${img.width}×${img.height} PNG`);
+        const aspect = asp === 'view' ? R.w / R.h : parseFloat(asp);
+        const w = sel === 'view' ? R.w : parseInt(sel, 10);
+        const out = await renderPNG(w, Math.round(w / aspect));
+        download(out.blob, `fractility_${stamp()}.png`);
+        toast(`Saved ${out.width}×${out.height} PNG`);
     } catch (e) { console.error(e); toast('Save failed: ' + e.message); }
+}
+
+// ------------------------------------------------------------------ shared image shelf (snicker02.github.io/shared/bridge.js)
+function setupShelf() {
+    const btn = $('btnShelf');
+    if (!window.SnickerShelf) { btn.hidden = true; return; }
+    window.SnickerShelf.mount({
+        app: 'Fractility-Web',
+        button: btn,
+        // incoming images (Load here / ?shelf=<id>) become the Image Input start pattern
+        onImage: async (file) => { await loadMediaFile(file); },
+        // "Save current" / "Send to": the current frame through the post pass, at view size
+        getImage: () => renderPNG(R.w, R.h).then((o) => o.blob),
+        getMeta: () => ({ name: `fractility-${stamp()}.png`, params: gatherPreset() }),
+    });
 }
 
 // ------------------------------------------------------------------ recording
@@ -882,6 +901,7 @@ function boot() {
         try { applyPreset(JSON.parse($('pasteText').value)); toast('Preset applied'); } catch (err) { toast('Not a valid preset: ' + err.message); }
     });
 
+    setupShelf();
     updateHint();
     setTimeout(() => $('hint').classList.add('fade'), 6000);
     applyLayoutMode();
