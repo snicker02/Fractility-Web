@@ -147,6 +147,10 @@ SITE=../snicker02.github.io python3 tests/shelf_test.py   # shelf: save, apps.js
 
 - **1.0.0** — First web release: 2D feedback engine, all 46 variations, start patterns, effects, presets, PNG/MP4/WebM export, and the mobile layout.
 
+## License
+
+MIT — see [LICENSE](LICENSE).
+
 ---
 
 Created with help from Claude AI
